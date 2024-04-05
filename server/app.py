@@ -76,9 +76,10 @@ class Logout(Resource):
 class RecipeIndex(Resource):
     def get(self):
         
-        user = User.query.filter(User.id == session['user_id']).first()
-        
-        return [recipe.to_dict() for recipe in user.recipes], 200
+        if user := User.query.filter(User.id == session['user_id']).first():
+            return [recipe.to_dict() for recipe in user.recipes], 200
+        else:
+            return {"error": "failed to retrieve"}, 422
     
     def post(self):
         
@@ -86,7 +87,6 @@ class RecipeIndex(Resource):
             data = request.get_json()
             
             new_recipe = Recipe(**data)
-            import ipdb; ipdb.set_trace()
             new_recipe.user_id = session.get("user_id")
             db.session.add(new_recipe)
             db.session.commit()
