@@ -30,8 +30,6 @@ class Signup(Resource):
         new_user.password_hash = password
         try:
             db.session.add(new_user)
-            # import ipdb; ipdb.set_trace()
-            User.query.delete()
             db.session.commit()
             
             session["user_id"] = new_user.id
@@ -45,8 +43,8 @@ class Signup(Resource):
 class CheckSession(Resource):
     def get(self):
         
-        if user_id := session['user_id']:
-            user = User.query.filter(User.id == user_id).first()
+        if user_id := session.get('user_id'):
+            user = db.session.get(User, user_id)
             return user.to_dict(), 200
 
         return {},  401
@@ -88,7 +86,8 @@ class RecipeIndex(Resource):
             data = request.get_json()
             
             new_recipe = Recipe(**data)
-            
+            import ipdb; ipdb.set_trace()
+            new_recipe.user_id = session.get("user_id")
             db.session.add(new_recipe)
             db.session.commit()
             

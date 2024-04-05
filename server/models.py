@@ -15,6 +15,8 @@ class User(db.Model, SerializerMixin):
 
     recipes = db.relationship("Recipe", back_populates = 'user')
     
+    serialize_rules = ("-recipes.user", "-_password_hash")
+    
     @hybrid_property
     def password_hash(self):
 # sourcery skip: raise-specific-error
