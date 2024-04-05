@@ -12,7 +12,7 @@ from models import User, Recipe
 def check_if_logged_in():
     open_endpoint = ["signup", "login", "check_session"]
     if request.endpoint not in open_endpoint and not session.get("user_id"):
-        return {"error": "Unauthorized"}, 401
+        return {"error": "401: Unauthorized"}, 401
 
 
 class Signup(Resource):
@@ -21,41 +21,81 @@ class Signup(Resource):
         data = request.get_json()
         password = data.get("password")
 
-        user = User(
+        new_user = User(
             username=data.get("username"),
             image_url=data.get("image_url"),
             bio=data.get("bio"),
         )
 
-        user.password_hash = password
+        new_user.password_hash = password
         try:
-            db.session.add(user)
+            db.session.add(new_user)
             # import ipdb; ipdb.set_trace()
             User.query.delete()
             db.session.commit()
             
-            session["user_id"] = user.id
+            session["user_id"] = new_user.id
 
-            return user.to_dict(), 201
+            return new_user.to_dict(), 201
 
         except Exception as e:
             return {"message": str(e)}, 422
 
 
 class CheckSession(Resource):
-    pass
+    def get(self):
+        
+        if user_id := session['user_id']:
+            user = User.query.filter(User.id == user_id).first()
+            return user.to_dict(), 200
+
+        return {},  401
 
 
 class Login(Resource):
-    pass
-
+    def post(self):
+        try:
+            data = request.get_json()
+            
+            username = data.get('username')
+            password = data.get('password')
+            
+            if user := User.query.filter(User.username == username).first():
+                if user.authenticate(password):
+                    session['user_id'] = user.id
+                    return user.to_dict(), 200
+            return {'error': 'Wrong username or password'}, 401
+        except Exception as e:
+            return {"error": str(e)}, 401
 
 class Logout(Resource):
-    pass
+    def delete(self):
+        session['user_id'] = None
+        
+        return {}, 204
 
 
 class RecipeIndex(Resource):
-    pass
+    def get(self):
+        
+        user = User.query.filter(User.id == session['user_id']).first()
+        
+        return [recipe.to_dict() for recipe in user.recipes], 200
+    
+    def post(self):
+        
+        try:
+            data = request.get_json()
+            
+            new_recipe = Recipe(**data)
+            
+            db.session.add(new_recipe)
+            db.session.commit()
+            
+            return new_recipe.to_dict(), 201
+        
+        except Exception as e:
+            return {"error": str(e)}, 422
 
 
 api.add_resource(Signup, "/signup", endpoint="signup")
